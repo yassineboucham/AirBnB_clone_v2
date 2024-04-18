@@ -3,9 +3,15 @@
 import uuid
 from datetime import datetime
 
+Base = declarative_base()
 
 class BaseModel:
     """A base class for all hbnb models"""
+
+    id = column(string(60), unique=True, primary_key=True, nullable=False)
+    created_at = column(DateTime, nullable=False, default=datetime.utcnow())
+    updated_at = column(DateTime, nullable=False, default=datetime.utcnow())
+
     def __init__(self, *args, **kwargs):
         """Instatntiates a new model"""
         if not kwargs:
@@ -31,14 +37,24 @@ class BaseModel:
         """Updates updated_at with current time when instance is changed"""
         from models import storage
         self.updated_at = datetime.now()
+        storage.new(self)
         storage.save()
 
     def to_dict(self):
         """Convert instance into dict format"""
         dictionary = {}
         dictionary.update(self.__dict__)
+        #dele the key if not exict
+        if (dictionary.get("_sa_instance_state")):
+            dictionary.pop("_sa_instance_state")
+
         dictionary.update({'__class__':
                           (str(type(self)).split('.')[-1]).split('\'')[0]})
         dictionary['created_at'] = self.created_at.isoformat()
         dictionary['updated_at'] = self.updated_at.isoformat()
         return dictionary
+
+    def delete(self):
+        """ delete the current instance from the storage """
+        from model import storage
+        storage.delete(self)
