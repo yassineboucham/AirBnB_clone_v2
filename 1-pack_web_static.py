@@ -2,8 +2,7 @@
 """ This module contains the function do_pack that generates a .tgz archive
   from the contents of the web_static folder (fabric script) """
 
-
-from fabric.api import local # type: ignore
+from fabric.api import local
 from datetime import datetime
 
 
