@@ -1,15 +1,28 @@
 #!/usr/bin/env bash
-# Script that configures Nginx server with some folders and files
-sudo apt-get -y update
-sudo apt-get -y upgrade
-sudo apt-get -y install nginx
-sudo mkdir -p /data/web_static/releases/test/
+#sets up your web servers for the deployment of web_static
+
+sudo apt update
+sudo apt install nginx
+sudo ufw allow 'Nginx HTTP'
+
+sudo mkdir -p /data/
+sudo mkdir -p /data/web_static/
+sudo mkdir -p /data/web_static/releases/
 sudo mkdir -p /data/web_static/shared/
-echo "Holberton School" | sudo tee /data/web_static/releases/test/index.html
-sudo ln -sf /data/web_static/releases/test/ /data/web_static/current
-sudo chown -hR ubuntu:ubuntu /data/
-conf="\\\n\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}"
-sudo sed -i "45i $conf" /etc/nginx/sites-available/default
-sudo service nginx start
-sudo service nginx restart
-sudo service nginx reload
+sudo mkdir -p /data/web_static/releases/test/
+sudo touch /data/web_static/releases/test/index.html
+sudo echo "<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello, World!</title>
+</head>
+<body>
+    <h1>Hello, World!</h1>
+</body>
+</html>" | sudo tee /data/web_static/releases/test/index.html
+sudo ln -s -f "/data/web_static/releases/test/"  "/data/web_static/current"
+sudo chown -R ubuntu:ubuntu  /data/
+sudo sed -i '/server {/a \ \n\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}\n' /etc/nginx/sites-available/default
+sudo systemctl restart nginx
