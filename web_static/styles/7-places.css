@@ -1,0 +1,29 @@
+h1 {
+    font-size: 30px;
+}
+
+.places {
+    padding: 30px;
+}
+
+.container {
+    margin-top: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+}
+
+
+.container article {
+    width: 390px;
+    border: 1px solid #FF5A5F; 
+    padding: 20px;
+    border-radius: 4px;
+    position: relative;
+}
+
+.container article h2 {
+    font-size: 30px;
+    text-align: center;
+}
