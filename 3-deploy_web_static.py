@@ -7,9 +7,10 @@ from datetime import datetime
 import os.path
 
 env.hosts = [
-    "18.206.208.23",
-    "54.210.152.224"
+    "100.26.239.10",
+    "52.91.127.91"
 ]
+
 
 def do_pack():
     """generates a .tgz archive from the contents of the web_static folder
@@ -27,6 +28,7 @@ def do_pack():
         return tar_path
     else:
         return None
+
 
 def Uploading(archive_path):
     """Helper function to avoid long lines"""
@@ -77,13 +79,9 @@ def do_deploy(archive_path):
         print("Some thing went worng!")
         return False
 
-def deploy():
-    """creates and distributes an archive to the web servers
 
-    Usage: 
-        fab -f 3-deploy_web_static.py deploy [-i my_ssh_private_key]
-        [-u ubuntu]
-    """
+def deploy():
+    """ creates and distributes an archive to the web servers"""
     packed_path = do_pack()
     if not packed_path:
         return False

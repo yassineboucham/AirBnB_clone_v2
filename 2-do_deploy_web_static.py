@@ -6,10 +6,12 @@ from fabric.api import *
 from datetime import datetime
 import os.path
 
+
 env.hosts = [
     "100.26.239.10",
     "52.91.127.91"
 ]
+
 
 def do_pack():
     """generates a .tgz archive from the contents of the web_static folder
@@ -27,6 +29,7 @@ def do_pack():
         return tar_path
     else:
         return None
+
 
 def Uploading(archive_path):
     """Helper function to avoid long lines"""
@@ -58,6 +61,7 @@ def Uploading(archive_path):
 
     run("rm /data/web_static/current")
     run("ln -sf {} /data/web_static/current".format(new_release_path))
+
 
 def do_deploy(archive_path):
     """Distributes an archive to your web servers
