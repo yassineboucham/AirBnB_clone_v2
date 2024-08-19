@@ -1,88 +1,54 @@
 #!/usr/bin/python3
 """
-Creates and distributes an archive to your web servers
-"""
-from fabric.api import *
-from datetime import datetime
-import os.path
+Fabric script based on the file 2-do_deploy_web_static.py that creates and
+distributes an archive to the web servers
 
-env.hosts = [
-    "100.26.239.10",
-    "52.91.127.91"
-]
+execute: fab -f 3-deploy_web_static.py deploy -i ~/.ssh/id_rsa -u ubuntu
+"""
+
+from fabric.api import env, local, put, run
+from datetime import datetime
+from os.path import exists, isdir
+env.hosts = ['100.26.239.10', '52.91.127.91']
 
 
 def do_pack():
-    """generates a .tgz archive from the contents of the web_static folder
-    Usage:
-        fab -f 1-pack_web_static.py do_pack
-    """
-    local("mkdir -p versions")
-    curr_time = datetime.now()
-    ver_time = curr_time.strftime("%Y%m%d%H%M%S")
-    tar_path = "versions/web_static_{}.tgz".format(ver_time)
-
-    r = local("tar czf {} web_static/".format(tar_path))
-
-    if r.succeeded:
-        return tar_path
-    else:
+    """generates a tgz archive"""
+    try:
+        date = datetime.now().strftime("%Y%m%d%H%M%S")
+        if isdir("versions") is False:
+            local("mkdir versions")
+        file_name = "versions/web_static_{}.tgz".format(date)
+        local("tar -cvzf {} web_static".format(file_name))
+        return file_name
+    except:
         return None
 
 
-def Uploading(archive_path):
-    """Helper function to avoid long lines"""
-    # Upload the archive to the /tmp/ directory of the web server
-    put(archive_path, "/tmp/")
-
-    releases_path = "/data/web_static/releases/"
-    # Get the name of the archive web_static_longdate.org
-    archive_file = archive_path.split("/")[-1]
-    # The path where archive is located in the curr remote server
-    remote_archive_path = "/tmp/" + archive_file
-    # The path where archive will be extracted
-    new_release_path = releases_path + archive_file.split(".")[-2]
-
-    # Extract the archive into releases_path
-    tar_args = (remote_archive_path, releases_path)
-    cmd = run("tar xvf {} --directory={}".format(*tar_args))
-
-    # We done with the archive, so let's get ride of it
-    run("rm {}".format(remote_archive_path))
-
-    # The archive is consists of the directory web_static, so I had to mess
-    # around with it to get its content moved to new_release_path, and finally
-    # remove it, Please DO NOT ask me why I didn't compress the files directly
-    # into the archive file, I was told to do it this way.
-    run("mkdir -p {}".format(new_release_path))
-    run("cp -r {}/* {}/".format(releases_path+"web_static", new_release_path))
-    run("rm -rf {}".format(releases_path+"web_static"))
-
-    run("rm /data/web_static/current")
-    run("ln -sf {} /data/web_static/current".format(new_release_path))
-
-
 def do_deploy(archive_path):
-    """Distributes an archive to your web servers
-        Usage:
-            fab -f 2-do_deploy_web_static.py
-            do_deploy:<path/to/archive>
-            [-i my_ssh_private_key -u ubuntu]
-    """
-    if not os.path.isfile(archive_path):
+    """distributes an archive to the web servers"""
+    if exists(archive_path) is False:
         return False
     try:
-        Uploading(archive_path)
-        print("--- Everything goes well ---")
+        file_n = archive_path.split("/")[-1]
+        no_ext = file_n.split(".")[0]
+        path = "/data/web_static/releases/"
+        put(archive_path, '/tmp/')
+        run('mkdir -p {}{}/'.format(path, no_ext))
+        run('tar -xzf /tmp/{} -C {}{}/'.format(file_n, path, no_ext))
+        run('rm /tmp/{}'.format(file_n))
+        run('mv {0}{1}/web_static/* {0}{1}/'.format(path, no_ext))
+        run('rm -rf {}{}/web_static'.format(path, no_ext))
+        run('rm -rf /data/web_static/current')
+        run('ln -s {}{}/ /data/web_static/current'.format(path, no_ext))
         return True
-    except Exception as e:
-        print("Some thing went worng!")
+    except:
         return False
 
 
 def deploy():
-    """ creates and distributes an archive to the web servers"""
-    packed_path = do_pack()
-    if not packed_path:
+    """creates and distributes an archive to the web servers"""
+    archive_path = do_pack()
+    if archive_path is None:
         return False
-    return do_deploy(packed_path)
+    return do_deploy(archive_path)
