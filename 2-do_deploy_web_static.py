@@ -1,46 +1,77 @@
 #!/usr/bin/python3
-""" a Fabric script (based on the file 1-pack_web_static.py) that distributes..
-    ..an archive to your web servers, using the function do_deploy: """
-
-
+"""
+Distributes an archive to your web servers
+"""
 from fabric.api import *
 from datetime import datetime
-from os.path import exists
+import os.path
 
+env.hosts = [
+    "100.26.239.10",
+    "52.91.127.91"
+]
 
-env.hosts = ['100.26.239.10', '52.91.127.91']  # <IP web-01>, <IP web-02>
-# ^ All remote commands must be executed on your both web servers
-# (using env.hosts = ['<IP web-01>', 'IP web-02'] variable in your script)
+def do_pack():
+    """generates a .tgz archive from the contents of the web_static folder
+    Usage:
+        fab -f 1-pack_web_static.py do_pack
+    """
+    local("mkdir -p versions")
+    curr_time = datetime.now()
+    ver_time = curr_time.strftime("%Y%m%d%H%M%S")
+    tar_path = "versions/web_static_{}.tgz".format(ver_time)
 
+    r = local("tar czf {} web_static/".format(tar_path))
+
+    if r.succeeded:
+        return tar_path
+    else:
+        return None
+
+def Uploading(archive_path):
+    """Helper function to avoid long lines"""
+    # Upload the archive to the /tmp/ directory of the web server
+    put(archive_path, "/tmp/")
+
+    releases_path = "/data/web_static/releases/"
+    # Get the name of the archive web_static_longdate.org
+    archive_file = archive_path.split("/")[-1]
+    # The path where archive is located in the curr remote server
+    remote_archive_path = "/tmp/" + archive_file
+    # The path where archive will be extracted
+    new_release_path = releases_path + archive_file.split(".")[-2]
+
+    # Extract the archive into releases_path
+    tar_args = (remote_archive_path, releases_path)
+    cmd = run("tar xvf {} --directory={}".format(*tar_args))
+
+    # We done with the archive, so let's get ride of it
+    run("rm {}".format(remote_archive_path))
+
+    # The archive is consists of the directory web_static, so I had to mess
+    # around with it to get its content moved to new_release_path, and finally
+    # remove it, Please DO NOT ask me why I didn't compress the files directly
+    # into the archive file, I was told to do it this way.
+    run("mkdir -p {}".format(new_release_path))
+    run("cp -r {}/* {}/".format(releases_path+"web_static", new_release_path))
+    run("rm -rf {}".format(releases_path+"web_static"))
+
+    run("rm /data/web_static/current")
+    run("ln -sf {} /data/web_static/current".format(new_release_path))
 
 def do_deploy(archive_path):
-    """ distributes an archive to my web servers
+    """Distributes an archive to your web servers
+        Usage:
+            fab -f 2-do_deploy_web_static.py
+            do_deploy:<path/to/archive>
+            [-i my_ssh_private_key -u ubuntu]
     """
-    if exists(archive_path) is False:
-        return False  # Returns False if the file at archive_path doesnt exist
-    filename = archive_path.split('/')[-1]
-    # so now filename is <web_static_2021041409349.tgz>
-    no_tgz = '/data/web_static/releases/' + "{}".format(filename.split('.')[0])
-    # curr = '/data/web_static/current'
-    tmp = "/tmp/" + filename
-
+    if not os.path.exists(archive_path):
+        return False
     try:
-        put(archive_path, "/tmp/")
-        # ^ Upload the archive to the /tmp/ directory of the web server
-        run("mkdir -p {}/".format(no_tgz))
-        # Uncompress the archive to the folder /data/web_static/releases/
-        # <archive filename without extension> on the web server
-        run("tar -xzf {} -C {}/".format(tmp, no_tgz))
-        run("rm {}".format(tmp))
-        run("mv {}/web_static/* {}/".format(no_tgz, no_tgz))
-        run("rm -rf {}/web_static".format(no_tgz))
-        # ^ Delete the archive from the web server
-        run("rm -rf /data/web_static/current")
-        # Delete the symbolic link /data/web_static/current from the web server
-        run("ln -s {}/ /data/web_static/current".format(no_tgz))
-        # Create a new the symbolic link /data/web_static/current on the
-        # web server, linked to the new version of your code
-        # (/data/web_static/releases/<archive filename without extension>)
+        Uploading(archive_path)
+        print("--- Everything goes well ---")
         return True
-    except:
+    except Exception as e:
+        print("Some thing went worng!")
         return False
