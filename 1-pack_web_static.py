@@ -3,7 +3,7 @@
 
 
 from fabric.api import *
-import datetime
+from datetime import datetime
 
 def do_pack():
     """archive from the contents of the web_static folder"""
